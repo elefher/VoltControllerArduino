@@ -57,6 +57,7 @@ float tolerance = 0;
 float highAlarmVolts = 0;
 float lowAlarmVolts = 0;
 float voltage = 0;
+float stepV = 0.1;
 
 int lowVoltLed = 2;
 int highVoltLed = 4;
@@ -64,7 +65,12 @@ int highRelay = 4;
 int lowRelay = 2;
 int alarmLed = 7;
 int modeButton = 8;
+int upButton = 10;
+int downButton = 13;
 int modeButtonStage = 0;
+int upButtonStage = 0;
+int downButtonStage = 0;
+int modeButtonCounter = 0;
 
 enum MODE { 
   NORMAL,
@@ -98,24 +104,44 @@ void setup() {
   pinMode(lowRelay, OUTPUT);
   pinMode(alarmLed, OUTPUT);
   pinMode(modeButton, INPUT);
+  pinMode(upButton, INPUT);
+  pinMode(downButton, INPUT);
 
   // initialize serial communication at 9600 bits per seconds  
   Serial.begin(9600);
-  delay(5000);
+  delay(3000);
   lcdClear();
 }
 
 void loop() {
-  lcdPrint(String(mode), 0, 0);
+  modeButtonStage = digitalRead(modeButton);
+  if(modeButtonStage){
+    modeButtonCounter++;
+    modeButtonStage = 0;
+  }
+
+  if(modeButtonCounter >= 3 || modeButtonCounter == 0){
+    modeButtonCounter = 0;
+    modeTask(modeButtonCounter);
+    normalModeProccess();
+  }else if(modeButtonCounter == 1){
+    modeTask(modeButtonCounter);
+    float newHighLevelVoltage = setHighLevelThreshold();
+    updateHighLevelScreen(newHighLevelVoltage);
+  }else if(modeButtonCounter == 2){
+    modeTask(modeButtonCounter);
+    float newLowLevelVoltage = setLowLevelThreshold();
+    updateLowLevelScreen(newLowLevelVoltage);
+  }
+
   if(lowVoltThreshold == 0 || highVoltThreshold == 0 || lowVoltThreshold >= highVoltThreshold){
     return;
   }
+  delay(300);
+}
 
-  modeButtonStage = digitalRead(modeButton);
-  if(modeButtonStage){
-    lcdPrint("MODE", 5, 0);
-  }
-  
+void normalModeProccess(){
+  lcdClear();
   int sensorValue = analogRead(A0);
   // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
   voltage = sensorValue * (5.0 / 1023.0);  
@@ -134,6 +160,79 @@ void loop() {
   }
 
   displayHighLowLevels(highVoltThreshold, lowVoltThreshold);
+}
+
+void modeTask(int mode){
+  if(mode == 0){
+    setModeToNormal();
+  }else if(mode == 1){
+    setModeToHihgLevel();
+  }else if(mode == 2){
+    setModeToLowLevel();
+  }
+}
+
+float setHighLevelThreshold(){
+  upButtonStage = digitalRead(upButton);
+  downButtonStage = digitalRead(downButton);
+
+  if(upButtonStage && !downButtonStage && highVoltThreshold <= 5){
+    highVoltThreshold += stepV;
+  }else if(!upButtonStage && downButtonStage && highVoltThreshold >= 0){
+    highVoltThreshold -= stepV;
+  }
+  
+  return highVoltThreshold;
+}
+
+float setLowLevelThreshold(){
+  upButtonStage = digitalRead(upButton);
+  downButtonStage = digitalRead(downButton);
+
+  if(upButtonStage && !downButtonStage && lowVoltThreshold <= 5){
+    lowVoltThreshold += stepV;
+  }else if(!upButtonStage && downButtonStage && lowVoltThreshold >= 0){
+    lowVoltThreshold -= stepV;
+  }
+  
+  return lowVoltThreshold;
+}
+
+void updateHighLevelScreen(float volt){
+  highAlarmVolts = highVoltThreshold + tolerance;
+  lowAlarmVolts = lowVoltThreshold - tolerance;
+  lcdClear();
+  lcdPrint("Set HL", 0, 0);
+  lcdPrint(String(volt), 12, 0);
+  lcdPrint("V", 15, 0);
+}
+
+void updateLowLevelScreen(float volt){
+  highAlarmVolts = highVoltThreshold + tolerance;
+  lowAlarmVolts = lowVoltThreshold - tolerance;
+  lcdClear();
+  lcdPrint("Set LL", 0, 0);
+  lcdPrint(String(volt), 12, 0);
+  lcdPrint("V", 15, 0);
+}
+
+void setModeToNormal(){
+  mode = NORMAL;
+//  Serial.println("mode" + String(mode));
+}
+
+void setModeToHihgLevel(){
+  mode = SETHIGHLEVEL;
+//  Serial.println("mode" + String(mode));
+}
+
+void setModeToLowLevel(){
+  mode = SETLOWLEVEL;
+//  Serial.println("mode" + String(mode));
+}
+
+MODE getMode(){
+  return mode;
 }
 
 void displayCurrentVoltage(float currentVoltage){
