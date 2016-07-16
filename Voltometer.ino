@@ -71,6 +71,7 @@ int modeButtonStage = 0;
 int upButtonStage = 0;
 int downButtonStage = 0;
 int modeButtonCounter = 0;
+int alarmIsOpened = 0;
 
 enum MODE { 
   NORMAL,
@@ -149,17 +150,29 @@ void normalModeProccess(){
 
   if(voltage <= lowVoltThreshold && voltage > lowAlarmVolts){
     setProcess("DOWN");
+    alarmIsOpened = 0;
   }
 
   if(voltage >= highVoltThreshold && voltage < highAlarmVolts){
     setProcess("UP");
+    alarmIsOpened = 0;
   }
 
   if(voltage > highAlarmVolts || voltage < lowAlarmVolts){
     alarmProcess();
+    displayAlarm();
+    alarmIsOpened = 1;
   }
 
-  displayHighLowLevels(highVoltThreshold, lowVoltThreshold);
+  if(!alarmIsOpened){
+    displayHighLowLevels(highVoltThreshold, lowVoltThreshold);
+  }
+}
+
+void displayAlarm(){
+  lcdPrint("     ", 5, 1);
+  delay(500);
+  lcdPrint("Alarm", 5, 1);
 }
 
 void modeTask(int mode){
