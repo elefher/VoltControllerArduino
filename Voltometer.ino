@@ -167,6 +167,7 @@ void normalModeProccess(){
 
   if(upLevelIsOn || downLevelIsOn){
     setLed(alarmLed, LOW);
+    alarmIsOpen = 0;
   }
 
   if(voltage > highAlarmVolts){
