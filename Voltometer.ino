@@ -73,6 +73,9 @@ int downButtonStage = 0;
 int modeButtonCounter = 0;
 int alarmIsOpen = 0;
 
+int upLevelIsOn = 0;
+int downLevelIsOn = 0;
+
 enum MODE { 
   NORMAL,
   SETHIGHLEVEL,
@@ -148,18 +151,30 @@ void normalModeProccess(){
   voltage = sensorValue * (5.0 / 1023.0);  
   displayCurrentVoltage(voltage);
 
-  if(voltage <= lowVoltThreshold && voltage > lowAlarmVolts){
+  if(voltage <= lowVoltThreshold && voltage > lowAlarmVolts && !downLevelIsOn){
     setProcess("DOWN");
     alarmIsOpen = 0;
+    downLevelIsOn = 1;
+    upLevelIsOn = 0;
   }
-
-  if(voltage >= highVoltThreshold && voltage < highAlarmVolts){
+  
+  if(voltage >= highVoltThreshold && !upLevelIsOn /*&& voltage < highAlarmVolts*/){
     setProcess("UP");
     alarmIsOpen = 0;
+    upLevelIsOn = 1;
+    downLevelIsOn = 0;
   }
 
-  if(voltage > highAlarmVolts || voltage < lowAlarmVolts){
-    alarmProcess();
+  if(upLevelIsOn || downLevelIsOn){
+    setLed(alarmLed, LOW);
+  }
+
+  if(voltage > highAlarmVolts){
+    alarmProcess("UP");
+    displayAlarm();
+    alarmIsOpen = 1;
+  }else if(voltage < lowAlarmVolts){
+    alarmProcess("DOWN");
     displayAlarm();
     alarmIsOpen = 1;
   }
@@ -170,26 +185,21 @@ void normalModeProccess(){
 }
 
 void setProcess(String process){
+  setLed(alarmLed, LOW);
   if(process.equals("DOWN")){
-    setRelay(inverterRelay, HIGH);
-    delay(2000);
+    setRelay(inverterRelay, LOW);
+    delay(5000);
     setRelay(mainRelay, LOW);
-    setLed(lowVoltLed, HIGH);
-    setLed(highVoltThreshold, LOW);
-    setLed(alarmLed, LOW);
   }else if(process.equals("UP")){
     setRelay(mainRelay, HIGH);
-    delay(2000);
-    setRelay(inverterRelay, LOW);
-    setLed(highVoltThreshold, HIGH);
-    setLed(lowVoltLed, LOW);
-    setLed(alarmLed, LOW);
+    delay(5000);
+    setRelay(inverterRelay, HIGH);
   }
 }
 
 void displayAlarm(){
   lcdPrint("     ", 5, 1);
-  delay(500);
+  delay(1000);
   lcdPrint("Alarm", 5, 1);
 }
 
@@ -292,12 +302,13 @@ void lcdClear(){
   lcd.clear();
 }
 
-void alarmProcess(){
+void alarmProcess(String status){
   setLed(alarmLed, HIGH);
-  setLed(lowVoltLed, HIGH);
-  setRelay(inverterRelay, HIGH);
-  setLed(highVoltThreshold, LOW);
-  setRelay(inverterRelay, LOW);
+  if(status == "UP"){
+    setRelay(inverterRelay, HIGH);
+  }else if (status == "DOWN"){
+    setRelay(inverterRelay, LOW);
+  }
 }
 
 void setRelay(int relayId, int statusRelay){
