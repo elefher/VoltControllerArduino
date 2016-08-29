@@ -76,6 +76,9 @@ int alarmIsOpen = 0;
 int upLevelIsOn = 0;
 int downLevelIsOn = 0;
 
+float R1 = 100000.0;
+float R2 = 10000.0;
+
 enum MODE { 
   NORMAL,
   SETHIGHLEVEL,
@@ -147,8 +150,14 @@ void loop() {
 void normalModeProccess(){
   lcdClear();
   int sensorValue = analogRead(A0);
-  // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
-  voltage = sensorValue * (5.0 / 1023.0);  
+  // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 30V):
+  voltage = sensorValue * (5.0 / 1024.0);  
+  voltage = voltage / (R2/(R1+R2)); 
+   
+  if (voltage < 0.09) {
+    voltage=0.0;
+  } 
+  
   displayCurrentVoltage(voltage);
 
   if(voltage <= lowVoltThreshold && voltage > lowAlarmVolts && !downLevelIsOn){
@@ -218,7 +227,7 @@ float setHighLevelThreshold(){
   upButtonStage = digitalRead(upButton);
   downButtonStage = digitalRead(downButton);
 
-  if(upButtonStage && !downButtonStage && highVoltThreshold <= 5){
+  if(upButtonStage && !downButtonStage && highVoltThreshold <= 30){
     highVoltThreshold += stepV;
   }else if(!upButtonStage && downButtonStage && highVoltThreshold >= 0){
     highVoltThreshold -= stepV;
