@@ -154,7 +154,7 @@ void normalModeProccess(){
   voltage = sensorValue * (5.0 / 1024.0);  
   voltage = voltage / (R2/(R1+R2)); 
    
-  if (voltage < 0.09) {
+  if (voltage <= 0.15) {
     voltage=0.0;
   } 
   
@@ -240,7 +240,7 @@ float setLowLevelThreshold(){
   upButtonStage = digitalRead(upButton);
   downButtonStage = digitalRead(downButton);
 
-  if(upButtonStage && !downButtonStage && lowVoltThreshold <= 5){
+  if(upButtonStage && !downButtonStage && lowVoltThreshold <= 29){
     lowVoltThreshold += stepV;
   }else if(!upButtonStage && downButtonStage && lowVoltThreshold >= 0){
     lowVoltThreshold -= stepV;
